@@ -1,6 +1,9 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
+// ✅ Add this at the top - use the same environment variable
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 interface User {
   id: string;
   email: string;
@@ -49,7 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await fetch('http://localhost:5000/api/auth/login', {
+    // ✅ CHANGE THIS LINE - use API_BASE instead of hardcoded localhost
+    const response = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -62,12 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const data = await response.json();
     
-    // 🔥 Save to localStorage (existing functionality)
+    // Save to localStorage
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     localStorage.setItem('userRole', data.user.role || 'customer');
     
-    // 🔥 NEW: Save to cookie for middleware
+    // Save to cookie for middleware
     setCookie('token', data.token, 7);
     setCookie('user', JSON.stringify(data.user), 7);
     setCookie('userRole', data.user.role || 'customer', 7);
