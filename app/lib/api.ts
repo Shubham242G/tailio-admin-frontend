@@ -1,6 +1,10 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+console.log('🔍 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+console.log('🔍 API_BASE:', API_BASE);
+
 export async function apiRequest(endpoint: string, options: RequestInit = {}) {
+  console.log('🔍 Making request to:', `${API_BASE}${endpoint}`);
   const token = localStorage.getItem('token');
   
   const config: RequestInit = {
