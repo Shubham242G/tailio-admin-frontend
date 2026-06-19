@@ -4,7 +4,7 @@ import { useAuth } from '../../components/AuthContext';
 import { motion } from 'framer-motion';
 import { 
   PawPrint, Users, Dog, CalendarCheck, 
-  Award, Loader2
+  Award, Loader2, BookOpen, PlusCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '../../lib/api';
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               Admin Dashboard
             </h1>
-            <p className="text-gray-500 mt-1">Manage customers, pets, and registrations</p>
+            <p className="text-gray-500 mt-1">Manage customers, pets, registrations, and content</p>
           </motion.div>
           
           <motion.div
@@ -356,6 +356,31 @@ export default function AdminDashboard() {
                 <span className="font-medium text-gray-700">Pending Documents</span>
                 <span className="text-orange-500 group-hover:translate-x-1 transition-transform">→</span>
               </Link>
+              
+              {/* Blog Management Section - New */}
+              <div className="pt-2 border-t border-gray-200">
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Content Management</div>
+                <Link 
+                  href="/dashboard/admin/blogs"
+                  className="flex items-center justify-between p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all duration-200 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                    <span className="font-medium text-gray-700">Manage Blog Posts</span>
+                  </div>
+                  <span className="text-blue-500 group-hover:translate-x-1 transition-transform">→</span>
+                </Link>
+                <Link 
+                  href="/dashboard/admin/blogs/new"
+                  className="flex items-center justify-between p-4 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all duration-200 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <PlusCircle className="w-5 h-5 text-emerald-600" />
+                    <span className="font-medium text-gray-700">Create New Post</span>
+                  </div>
+                  <span className="text-emerald-500 group-hover:translate-x-1 transition-transform">→</span>
+                </Link>
+              </div>
             </div>
           </motion.div>
         </div>

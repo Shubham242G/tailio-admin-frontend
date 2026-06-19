@@ -7,8 +7,8 @@ import { ArrowRight, Mail, Lock, PawPrint } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@unsaathi.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('admin@tailio.in');
+  const [password, setPassword] = useState('YourNewAdminPassword123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
@@ -158,7 +158,7 @@ export default function Login() {
         >
           <p className="text-sm font-medium text-gray-700 mb-1">Test Accounts:</p>
           <div className="text-xs space-y-1 text-gray-600">
-            <div>👑 Admin: <code className="text-[#f88013]">admin@unsaathi.com</code> / <code className="text-[#f88013]">admin123</code></div>
+            <div>👑 Admin: <code className="text-[#f88013]">admin@tailio.in.com</code> / <code className="text-[#f88013]">YourNewAdminPassword123</code></div>
             <div>💼 Salesman: <code className="text-[#f88013]">sales1@test.com</code> / <code className="text-[#f88013]">sales123</code></div>
             <div>👤 Customer: <code className="text-[#f88013]">customer@test.com</code> / <code className="text-[#f88013]">cust123</code></div>
           </div>
