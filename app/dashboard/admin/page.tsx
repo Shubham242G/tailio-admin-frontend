@@ -370,16 +370,6 @@ export default function AdminDashboard() {
                   </div>
                   <span className="text-blue-500 group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
-                <Link 
-                  href="/dashboard/admin/blogs/new"
-                  className="flex items-center justify-between p-4 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all duration-200 group"
-                >
-                  <div className="flex items-center gap-3">
-                    <PlusCircle className="w-5 h-5 text-emerald-600" />
-                    <span className="font-medium text-gray-700">Create New Post</span>
-                  </div>
-                  <span className="text-emerald-500 group-hover:translate-x-1 transition-transform">→</span>
-                </Link>
               </div>
             </div>
           </motion.div>
