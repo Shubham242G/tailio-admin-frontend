@@ -35,7 +35,7 @@ export default function AdminBlogsPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/api/blog/admin/all`, {
+      const response = await fetch(`${API_BASE}/blog/admin/all`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch blogs');
@@ -53,8 +53,8 @@ export default function AdminBlogsPage() {
     setError('');
     try {
       const url = editingBlog 
-        ? `${API_BASE}/api/blog/${editingBlog._id}`
-        : `${API_BASE}/api/blog`;
+        ? `${API_BASE}/blog/${editingBlog._id}`
+        : `${API_BASE}/blog`;
       
       const method = editingBlog ? 'PUT' : 'POST';
       
@@ -84,7 +84,7 @@ export default function AdminBlogsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this blog post?')) return;
     try {
-      const response = await fetch(`${API_BASE}/api/blog/${id}`, {
+      const response = await fetch(`${API_BASE}/blog/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
