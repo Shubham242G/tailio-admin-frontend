@@ -6,7 +6,9 @@ import { motion } from 'framer-motion';
 import { 
   ArrowLeft, User, Mail, Phone, Calendar, Dog, 
   FileText, Award, Clock, Loader2, CheckCircle, XCircle,
-  MapPin, CreditCard, AlertCircle, FileCheck, Eye
+  MapPin, CreditCard, AlertCircle, FileCheck, Eye,
+  Shield, Users, Building2, Hash, Edit, Trash2,
+  MessageCircle, Check, X, MoreVertical
 } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
@@ -18,9 +20,22 @@ interface CustomerDetail {
     email: string;
     username: string;
     mobile: string;
+    whatsappNumber: string;
     role: string;
+    city: string;
+    pricingTier: string;
+    registrationFee: number;
+    isVerified: boolean;
+    isDeleted: boolean;
     createdAt: string;
     updatedAt: string;
+    lastLoginAt: string;
+    whatsappOptIn: boolean;
+    createdBy: {
+      _id: string;
+      name: string;
+      email: string;
+    } | null;
   };
   pets: Array<{
     _id: string;
@@ -95,7 +110,8 @@ export default function CustomerDetailPage() {
       antiRabiesCertificate: 'Anti-Rabies Certificate',
       idProof: 'ID Proof',
       residenceProof: 'Residence Proof',
-      ownerWithPetPhoto: 'Owner with Pet Photo'
+      ownerWithPetPhoto: 'Owner with Pet Photo',
+      sterilizationCertificate: 'Sterilization Certificate'
     };
     return labels[docName] || docName;
   };
@@ -107,6 +123,27 @@ export default function CustomerDetailPage() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const getRoleBadge = (role: string) => {
+    const roles: Record<string, { color: string; icon: any }> = {
+      admin: { color: 'bg-purple-100 text-purple-700', icon: Shield },
+      salesman: { color: 'bg-blue-100 text-blue-700', icon: Users },
+      user: { color: 'bg-green-100 text-green-700', icon: User }
+    };
+    return roles[role] || roles.user;
+  };
+
+  const getCityLabel = (city: string) => {
+    const cities: Record<string, string> = {
+      ghaziabad: 'Ghaziabad',
+      delhi: 'Delhi',
+      noida: 'Noida',
+      gurgaon: 'Gurgaon',
+      faridabad: 'Faridabad',
+      other: 'Other'
+    };
+    return cities[city] || city;
   };
 
   if (loading) {
@@ -136,6 +173,9 @@ export default function CustomerDetailPage() {
   }
 
   const { customer, pets, registrations } = data;
+  const roleInfo = getRoleBadge(customer.role);
+  const RoleIcon = roleInfo.icon;
+
   const stats = {
     totalPets: pets.length,
     registeredPets: pets.filter(p => p.registrationStage === 4).length,
@@ -169,26 +209,46 @@ export default function CustomerDetailPage() {
                 <User className="w-10 h-10 text-orange-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{customer.name || customer.username}</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                    {customer.role || 'Customer'}
+                <h1 className="text-2xl font-bold text-gray-900">{customer.name || customer.username || 'Unnamed User'}</h1>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${roleInfo.color}`}>
+                    <RoleIcon className="w-3 h-3" />
+                    {customer.role || 'User'}
                   </span>
-                  <span className="text-sm text-gray-500">ID: {customer._id.slice(-8)}</span>
+                  {customer.isVerified ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                      <Check className="w-3 h-3" />
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">
+                      <X className="w-3 h-3" />
+                      Unverified
+                    </span>
+                  )}
+                  {customer.whatsappOptIn && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                      <MessageCircle className="w-3 h-3" />
+                      WhatsApp Opted In
+                    </span>
+                  )}
+                  <span className="text-sm text-gray-400">ID: {customer._id.slice(-8)}</span>
                 </div>
               </div>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => window.location.href = `mailto:${customer.email}`}
-                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
-              >
-                <Mail className="w-4 h-4" />
-                Send Email
-              </button>
-              {customer.mobile && (
+              {customer.email && (
                 <button
-                  onClick={() => window.location.href = `tel:${customer.mobile}`}
+                  onClick={() => window.location.href = `mailto:${customer.email}`}
+                  className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  Send Email
+                </button>
+              )}
+              {(customer.mobile || customer.whatsappNumber) && (
+                <button
+                  onClick={() => window.location.href = `tel:${customer.mobile || customer.whatsappNumber}`}
                   className="px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2"
                 >
                   <Phone className="w-4 h-4" />
@@ -198,24 +258,29 @@ export default function CustomerDetailPage() {
             </div>
           </div>
 
-          {/* Customer Info Grid */}
+          {/* Customer Info Grid - All User Model Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex items-center gap-3 text-gray-600">
               <Mail className="w-5 h-5 text-orange-500" />
               <div>
                 <p className="text-xs text-gray-400">Email</p>
-                <p className="font-medium text-gray-900">{customer.email}</p>
+                <p className="font-medium text-gray-900">{customer.email || 'Not provided'}</p>
               </div>
             </div>
-            {customer.mobile && (
-              <div className="flex items-center gap-3 text-gray-600">
-                <Phone className="w-5 h-5 text-orange-500" />
-                <div>
-                  <p className="text-xs text-gray-400">Mobile</p>
-                  <p className="font-medium text-gray-900">{customer.mobile}</p>
-                </div>
+            <div className="flex items-center gap-3 text-gray-600">
+              <Phone className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-xs text-gray-400">Mobile</p>
+                <p className="font-medium text-gray-900">{customer.mobile || 'Not provided'}</p>
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-3 text-gray-600">
+              <MessageCircle className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-xs text-gray-400">WhatsApp</p>
+                <p className="font-medium text-gray-900">{customer.whatsappNumber || 'Not provided'}</p>
+              </div>
+            </div>
             <div className="flex items-center gap-3 text-gray-600">
               <Calendar className="w-5 h-5 text-orange-500" />
               <div>
@@ -224,13 +289,60 @@ export default function CustomerDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
-              <Dog className="w-5 h-5 text-orange-500" />
+              <MapPin className="w-5 h-5 text-orange-500" />
               <div>
-                <p className="text-xs text-gray-400">Total Pets</p>
-                <p className="font-medium text-gray-900">{stats.totalPets}</p>
+                <p className="text-xs text-gray-400">City</p>
+                <p className="font-medium text-gray-900">{getCityLabel(customer.city)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-gray-600">
+              <CreditCard className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-xs text-gray-400">Registration Fee</p>
+                <p className="font-medium text-gray-900">₹{customer.registrationFee || 999}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-gray-600">
+              <Building2 className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-xs text-gray-400">Pricing Tier</p>
+                <p className="font-medium text-gray-900 capitalize">{customer.pricingTier || 'Standard'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-gray-600">
+              <Clock className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-xs text-gray-400">Last Login</p>
+                <p className="font-medium text-gray-900">{customer.lastLoginAt ? formatDate(customer.lastLoginAt) : 'Never'}</p>
               </div>
             </div>
           </div>
+
+          {/* Additional Info */}
+          {(customer.createdBy || customer.username) && (
+            <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {customer.username && (
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Hash className="w-5 h-5 text-orange-500" />
+                  <div>
+                    <p className="text-xs text-gray-400">Username</p>
+                    <p className="font-medium text-gray-900">{customer.username}</p>
+                  </div>
+                </div>
+              )}
+              {customer.createdBy && (
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Users className="w-5 h-5 text-orange-500" />
+                  <div>
+                    <p className="text-xs text-gray-400">Created By</p>
+                    <p className="font-medium text-gray-900">
+                      {customer.createdBy.name || customer.createdBy.email || 'System'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </motion.div>
 
         {/* Statistics Cards */}
@@ -473,7 +585,7 @@ export default function CustomerDetailPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {['antiRabiesCertificate', 'idProof', 'residenceProof', 'ownerWithPetPhoto'].map((docType) => {
+                  {['antiRabiesCertificate', 'idProof', 'residenceProof', 'ownerWithPetPhoto', 'sterilizationCertificate'].map((docType) => {
                     const uploaded = reg.documents?.some(d => d.documentName === docType);
                     const doc = reg.documents?.find(d => d.documentName === docType);
                     return (
