@@ -9,7 +9,8 @@ import {
   Syringe, Stethoscope, ChevronRight, AlertTriangle,
   MapPin, CreditCard, Tag, FileCheck, Image as ImageIcon,
   File, X, ZoomIn, Phone, Mail, Home, Scissors,
-  Package, Truck, Building2, Hash, Shield
+  Package, Truck, Building2, Hash, Shield, Camera,
+  PenTool, BookOpen, FileSignature
 } from 'lucide-react';
 import { api } from '../../../../lib/api';
 
@@ -83,12 +84,23 @@ interface PetDetail {
     isTagDeliveryAvailable: boolean;
     registrationTriggered: boolean;
     registrationTriggeredAt: string;
-    // ✅ Document fields with proper typing
+    // ✅ Document fields
     antiRabiesCertificate?: PetDocumentField;
     idProof?: PetDocumentField;
     residenceProof?: PetDocumentField;
     ownerWithPetPhoto?: PetDocumentField;
+    petPhoto?: PetDocumentField;
+    vaccinationCard?: PetDocumentField;
+    vaccinationCertificate?: PetDocumentField;
     sterilizationCertificate?: PetDocumentField;
+    ownerPhoto?: PetDocumentField;
+    ownerSignature?: PetDocumentField;
+    // Faridabad docs
+    proofOfIdentity?: PetDocumentField;
+    proofOfAddress?: PetDocumentField;
+    vaccinationRecord?: PetDocumentField;
+    petPhotographs?: PetDocumentField;
+    microchipDetails?: PetDocumentField;
   };
   registration: {
     _id: string;
@@ -113,21 +125,92 @@ const STAGES = [
   { stage: 4, label: 'Registered ✓',     desc: 'License delivered — registration complete',color: 'bg-green-100 text-green-700',  bar: 'bg-green-500'  },
 ];
 
+// ✅ Updated document labels for ALL cities
 const DOC_LABELS: Record<string, string> = {
+  // Base documents
   antiRabiesCertificate: 'Anti-Rabies Certificate',
   idProof: 'ID Proof',
   residenceProof: 'Residence Proof',
   ownerWithPetPhoto: 'Owner with Pet Photo',
+  
+  // Gurgaon docs
+  petPhoto: 'Pet Photo',
+  vaccinationCard: 'Vaccination Card',
+  vaccinationCertificate: 'Vaccination Certificate',
   sterilizationCertificate: 'Sterilization Certificate',
+  
+  // Ghaziabad & Noida docs
+  ownerPhoto: 'Owner Photo',
+  ownerSignature: 'Owner Signature',
+  
+  // Faridabad docs
+  proofOfIdentity: 'Proof of Identity',
+  proofOfAddress: 'Proof of Address',
+  vaccinationRecord: 'Vaccination Record',
+  petPhotographs: 'Pet Photographs',
+  microchipDetails: 'Microchip Details',
 };
 
+// ✅ Updated document icons
 const DOC_ICONS: Record<string, any> = {
   antiRabiesCertificate: Syringe,
   idProof: Shield,
   residenceProof: Home,
   ownerWithPetPhoto: ImageIcon,
+  petPhoto: Camera,
+  vaccinationCard: FileText,
+  vaccinationCertificate: Award,
   sterilizationCertificate: Scissors,
+  ownerPhoto: User,
+  ownerSignature: PenTool,
+  proofOfIdentity: Shield,
+  proofOfAddress: Home,
+  vaccinationRecord: BookOpen,
+  petPhotographs: ImageIcon,
+  microchipDetails: Hash,
 };
+
+// ✅ Document descriptions for tooltips
+const DOC_DESCRIPTIONS: Record<string, string> = {
+  antiRabiesCertificate: 'Anti-rabies vaccination certificate',
+  idProof: 'Aadhaar card, Passport, or government ID',
+  residenceProof: 'Electricity bill, Rental agreement',
+  ownerWithPetPhoto: 'Recent photo of owner with pet',
+  petPhoto: 'Clear photo of the pet alone',
+  vaccinationCard: 'Vaccination record card',
+  vaccinationCertificate: 'Official vaccination certificate',
+  sterilizationCertificate: 'Sterilization/spaying certificate (required for 4+ years)',
+  ownerPhoto: 'Clear photo of the pet owner',
+  ownerSignature: 'Digital or scanned signature of the owner',
+  proofOfIdentity: 'Proof of identity (Aadhaar, Voter ID, etc.)',
+  proofOfAddress: 'Proof of address (Utility bill, Rent agreement)',
+  vaccinationRecord: 'Complete vaccination record',
+  petPhotographs: 'Clear photos of the pet',
+  microchipDetails: 'Microchip number and registration',
+};
+
+// ✅ Document requirements by city
+function getCityRequiredDocs(city: string, isSterilizationRequired: boolean = false): string[] {
+  const base = ['antiRabiesCertificate', 'idProof', 'residenceProof', 'ownerWithPetPhoto'];
+  
+  if (city === 'gurgaon') {
+    const docs = [...base, 'petPhoto', 'vaccinationCard', 'vaccinationCertificate'];
+    if (isSterilizationRequired) {
+      docs.push('sterilizationCertificate');
+    }
+    return docs;
+  }
+  
+  if (['ghaziabad', 'noida'].includes(city)) {
+    return ['antiRabiesCertificate', 'idProof', 'residenceProof', 'ownerWithPetPhoto', 'ownerPhoto', 'petPhoto', 'ownerSignature'];
+  }
+  
+  if (city === 'faridabad') {
+    return ['proofOfIdentity', 'proofOfAddress', 'vaccinationRecord', 'petPhotographs', 'sterilizationCertificate', 'microchipDetails'];
+  }
+  
+  return base;
+}
 
 const CITY_LABELS: Record<string, string> = {
   ghaziabad: 'Ghaziabad',
@@ -228,7 +311,7 @@ export default function AdminPetDetailPage() {
     }
   };
 
-  // ✅ Get documents from registration or pet
+  // ✅ Get all documents from registration and pet
   const getAllDocuments = (): DocumentType[] => {
     const docs: DocumentType[] = [];
     const pet = data?.pet;
@@ -239,26 +322,34 @@ export default function AdminPetDetailPage() {
       docs.push(...registration.documents);
     }
     
-    // Also check individual document fields on pet (for backward compatibility)
+    // Also check individual document fields on pet
     if (pet) {
       const docFields = [
-        { key: 'antiRabiesCertificate' as const, name: 'antiRabiesCertificate' },
-        { key: 'idProof' as const, name: 'idProof' },
-        { key: 'residenceProof' as const, name: 'residenceProof' },
-        { key: 'ownerWithPetPhoto' as const, name: 'ownerWithPetPhoto' },
-        { key: 'sterilizationCertificate' as const, name: 'sterilizationCertificate' },
+        'antiRabiesCertificate',
+        'idProof',
+        'residenceProof',
+        'ownerWithPetPhoto',
+        'petPhoto',
+        'vaccinationCard',
+        'vaccinationCertificate',
+        'sterilizationCertificate',
+        'ownerPhoto',
+        'ownerSignature',
+        'proofOfIdentity',
+        'proofOfAddress',
+        'vaccinationRecord',
+        'petPhotographs',
+        'microchipDetails',
       ];
 
       for (const field of docFields) {
-        const docData = pet[field.key];
-        // ✅ Use type guard to check if this is a valid document field
+        const docData = pet[field as keyof typeof pet];
         if (isPetDocumentField(docData)) {
-          // Check if this document is already in the documents array
-          const exists = docs.some(d => d.documentName === field.name);
+          const exists = docs.some(d => d.documentName === field);
           if (!exists) {
             docs.push({
-              documentName: field.name,
-              fileName: docData.fileName || `${field.name}.pdf`,
+              documentName: field,
+              fileName: docData.fileName || `${field}.pdf`,
               fileSize: docData.fileSize || 0,
               fileData: docData.fileData,
               mimeType: docData.mimeType || 'application/pdf',
@@ -272,36 +363,37 @@ export default function AdminPetDetailPage() {
     return docs;
   };
 
-  // ✅ Get document count from registration
-  const getDocumentCount = (): number => {
-    const docs = getAllDocuments();
-    return docs.length;
+  // ✅ Get required docs for the city
+  const getRequiredDocs = (): string[] => {
+    if (!data?.pet) return [];
+    return getCityRequiredDocs(data.pet.city, data.pet.isSterilizationRequired);
   };
 
   // ✅ Check if all required documents are uploaded
   const hasAllRequiredDocs = (): boolean => {
     const docs = getAllDocuments();
     const docNames = docs.map(d => d.documentName);
-    const required = ['antiRabiesCertificate', 'idProof', 'residenceProof', 'ownerWithPetPhoto'];
-    if (data?.pet?.isSterilizationRequired) {
-      required.push('sterilizationCertificate');
-    }
+    const required = getRequiredDocs();
     return required.every(docName => docNames.includes(docName));
   };
 
-  // ✅ Get required docs count
-  const getRequiredDocsCount = (): number => {
-    let count = 4;
-    if (data?.pet?.isSterilizationRequired) {
-      count = 5;
-    }
-    return count;
+  // ✅ Get document status (which are uploaded, which are missing)
+  const getDocumentStatus = (): { uploaded: string[], missing: string[] } => {
+    const docs = getAllDocuments();
+    const uploaded = docs.map(d => d.documentName);
+    const required = getRequiredDocs();
+    const missing = required.filter(doc => !uploaded.includes(doc));
+    return { uploaded, missing };
   };
+
+  const allDocs = getAllDocuments();
+  const requiredDocs = getRequiredDocs();
+  const docStatus = getDocumentStatus();
+  const hasAllDocs = hasAllRequiredDocs();
 
   const downloadDocument = (doc: DocumentType) => {
     if (doc.fileData) {
       try {
-        // Handle both Base64 with and without data URL prefix
         let fileData = doc.fileData;
         if (!fileData.startsWith('data:')) {
           const mimeType = doc.mimeType || 'application/pdf';
@@ -348,22 +440,6 @@ export default function AdminPetDetailPage() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // ✅ Get sterilization status
-  const getSterilizationStatus = () => {
-    const docs = getAllDocuments();
-    const doc = docs.find(d => d.documentName === 'sterilizationCertificate');
-    if (doc?.fileData) {
-      return { uploaded: true, fileData: doc.fileData };
-    }
-    return { uploaded: false, fileData: null };
-  };
-
-  const allDocs = getAllDocuments();
-  const docCount = allDocs.length;
-  const requiredDocs = getRequiredDocsCount();
-  const hasAllDocs = hasAllRequiredDocs();
-  const sterilization = getSterilizationStatus();
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>;
   }
@@ -374,10 +450,10 @@ export default function AdminPetDetailPage() {
   const { pet, registration } = data;
   const currentStage = STAGES[pet.registrationStage] ?? STAGES[0];
   const isComplete = pet.registrationStage === 4;
-
-  // Registration payment status from registration model
   const regPaymentStatus = registration?.paymentStatus || pet.paymentStatus || 'pending';
-  const regPaymentId = registration?.paymentId || pet.paymentId || 'N/A';
+
+  // Get city display name
+  const cityDisplay = CITY_LABELS[pet.city] || pet.city || 'N/A';
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -423,7 +499,7 @@ export default function AdminPetDetailPage() {
                   ['Gender', pet.gender || 'Unknown'],
                   ['Color', pet.color || 'N/A'],
                   ['Microchip', pet.microchip || 'Not added'],
-                  ['City', CITY_LABELS[pet.city] || pet.city],
+                  ['City', cityDisplay],
                   ['Registered', formatDate(pet.createdAt)],
                 ].map(([label, val]) => (
                   <div key={label}>
@@ -506,7 +582,7 @@ export default function AdminPetDetailPage() {
                 {[
                   ['Payment Status', regPaymentStatus === 'completed' ? '✅ Completed' : regPaymentStatus === 'failed' ? '❌ Failed' : '⏳ Pending'],
                   ['Payment Amount', pet.paymentAmount ? `₹${pet.paymentAmount}` : 'N/A'],
-                  ['Payment ID', regPaymentId],
+                  ['Payment ID', pet.paymentId || 'N/A'],
                 ].map(([l, v]) => (
                   <div key={l}><p className="text-gray-400">{l}</p><p className="font-medium text-gray-900">{v}</p></div>
                 ))}
@@ -530,25 +606,51 @@ export default function AdminPetDetailPage() {
               className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-orange-500" />
-                Documents ({docCount}/{requiredDocs})
+                Documents ({docStatus.uploaded.length}/{requiredDocs.length} Required)
               </h2>
 
+              {/* City info */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
+                <p className="text-gray-600">City: <strong className="text-gray-900">{cityDisplay}</strong></p>
+                <p className="text-gray-600 mt-1">
+                  Required: <strong className="text-gray-900">{requiredDocs.length} documents</strong>
+                  {pet.isSterilizationRequired && ' (including Sterilization Certificate)'}
+                </p>
+                <p className="text-gray-600 mt-1">
+                  Status: <span className={hasAllDocs ? 'text-green-600 font-semibold' : 'text-orange-600 font-semibold'}>
+                    {hasAllDocs ? '✅ All uploaded' : `${docStatus.uploaded.length}/${requiredDocs.length} uploaded`}
+                  </span>
+                </p>
+              </div>
+
+              {/* All Documents List */}
               {allDocs && allDocs.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                   {allDocs.map((doc, index) => {
                     const Icon = DOC_ICONS[doc.documentName] || FileText;
+                    const isRequired = requiredDocs.includes(doc.documentName);
                     return (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-orange-50 transition-colors group">
+                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg transition-colors group ${
+                        isRequired ? 'bg-gray-50 hover:bg-orange-50' : 'bg-gray-50/50 hover:bg-gray-100'
+                      }`}>
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Icon className="w-4 h-4 text-orange-600" />
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            isRequired ? 'bg-orange-100' : 'bg-gray-200'
+                          }`}>
+                            <Icon className={`w-4 h-4 ${isRequired ? 'text-orange-600' : 'text-gray-500'}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">
                               {DOC_LABELS[doc.documentName] || doc.documentName}
+                              {!isRequired && (
+                                <span className="ml-2 text-xs text-gray-400 font-normal">(Optional)</span>
+                              )}
+                              {isRequired && docStatus.uploaded.includes(doc.documentName) && (
+                                <CheckCircle className="w-3.5 h-3.5 text-green-500 inline ml-1.5" />
+                              )}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-gray-400">
-                              <span>{doc.fileName}</span>
+                              <span className="truncate max-w-[100px]">{doc.fileName}</span>
                               <span>•</span>
                               <span>{formatFileSize(doc.fileSize)}</span>
                               <span>•</span>
@@ -583,29 +685,51 @@ export default function AdminPetDetailPage() {
                 </div>
               )}
 
-              {/* Document Status Summary */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Document Status</span>
-                  <span className={`font-semibold ${hasAllDocs ? 'text-green-600' : 'text-orange-600'}`}>
-                    {hasAllDocs ? '✅ All uploaded' : `${docCount}/${requiredDocs} uploaded`}
-                  </span>
+              {/* Missing Documents */}
+              {docStatus.missing.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-sm font-medium text-red-600 mb-2 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    Missing Required Documents:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {docStatus.missing.map(doc => (
+                      <span key={doc} className="px-2.5 py-1 bg-red-50 text-red-700 text-xs rounded-full border border-red-200">
+                        {DOC_LABELS[doc] || doc}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                {pet.isSterilizationRequired && (
-                  <div className="flex items-center justify-between text-sm mt-2">
-                    <span className="text-gray-600">Sterilization Required</span>
-                    <span className={`font-semibold ${sterilization.uploaded ? 'text-green-600' : 'text-red-600'}`}>
-                      {sterilization.uploaded ? '✅ Uploaded' : '⚠️ Required'}
-                    </span>
+              )}
+
+              {/* Registration Info */}
+              {registration && (
+                <div className="mt-4 pt-4 border-t border-gray-100 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-gray-400">Registration ID</p>
+                      <p className="font-mono text-gray-900 text-xs">{registration._id.slice(-8)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Status</p>
+                      <p className="font-medium">{registration.isComplete ? '✅ Complete' : '⏳ In Progress'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Created</p>
+                      <p className="text-gray-900 text-xs">{formatDate(registration.createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Payment Status</p>
+                      <p className={`font-medium ${
+                        registration.paymentStatus === 'completed' ? 'text-green-600' :
+                        registration.paymentStatus === 'failed' ? 'text-red-600' : 'text-yellow-600'
+                      }`}>
+                        {registration.paymentStatus || 'pending'}
+                      </p>
+                    </div>
                   </div>
-                )}
-                {registration && (
-                  <div className="flex items-center justify-between text-sm mt-2">
-                    <span className="text-gray-600">Registration Created</span>
-                    <span className="font-medium text-gray-900">{formatDate(registration.createdAt)}</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Registration Controls Card */}
@@ -617,19 +741,16 @@ export default function AdminPetDetailPage() {
 
               {/* Progress bar */}
               <div className="mb-4">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Start</span>
+                  <span>{currentStage.label}</span>
+                  <span>Complete</span>
+                </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div className={`h-2.5 rounded-full transition-all ${currentStage.bar}`} style={{ width: `${(pet.registrationStage / 4) * 100}%` }} />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{currentStage.desc}</p>
               </div>
-
-              {/* Registration Info */}
-              {registration && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
-                  <p className="text-gray-600">Registration ID: <span className="font-mono text-gray-900">{registration._id.slice(-8)}</span></p>
-                  <p className="text-gray-600 mt-1">Registration: {registration.isComplete ? '✅ Complete' : '⏳ In Progress'}</p>
-                </div>
-              )}
 
               {/* Admin Actions */}
               {!isComplete ? (
@@ -637,12 +758,13 @@ export default function AdminPetDetailPage() {
                   {!hasAllDocs && pet.registrationStage < 2 && (
                     <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg text-sm">
                       <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                      Documents incomplete ({docCount}/{requiredDocs}). Verify manually before advancing.
+                      Documents incomplete ({docStatus.uploaded.length}/{requiredDocs.length}). 
+                      Missing: {docStatus.missing.map(d => DOC_LABELS[d] || d).join(', ')}
                     </div>
                   )}
 
                   <div className="flex flex-wrap gap-2">
-                    {pet.registrationStage < 3 && (
+                    {pet.registrationStage < 3 && hasAllDocs && (
                       <button
                         onClick={() => updateStage(3)}
                         disabled={updatingStage}
@@ -714,6 +836,7 @@ export default function AdminPetDetailPage() {
                 <div>
                   <h3 className="font-bold text-gray-900">{DOC_LABELS[selectedDoc.documentName] || selectedDoc.documentName}</h3>
                   <p className="text-xs text-gray-500">{selectedDoc.fileName} • {formatFileSize(selectedDoc.fileSize)}</p>
+                  <p className="text-xs text-gray-400">{DOC_DESCRIPTIONS[selectedDoc.documentName] || ''}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
