@@ -65,6 +65,7 @@ export default function AdminDashboard() {
   const fetchRecentRegistrations = async () => {
     try {
       const data = await api.admin.getRegistrations();
+      // data is already an array from our updated API
       const registrations = Array.isArray(data) ? data : [];
       setRecentRegistrations(registrations.slice(0, 5));
     } catch (error) {
@@ -357,7 +358,7 @@ export default function AdminDashboard() {
                 <span className="text-orange-500 group-hover:translate-x-1 transition-transform">→</span>
               </Link>
               
-              {/* Blog Management Section - New */}
+              {/* Blog Management Section */}
               <div className="pt-2 border-t border-gray-200">
                 <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Content Management</div>
                 <Link 

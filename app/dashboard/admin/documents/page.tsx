@@ -35,7 +35,8 @@ export default function AdminDocuments() {
   const fetchPendingDocuments = async () => {
     try {
       const data = await api.admin.getPendingDocuments();
-      setDocuments(data);
+      // data is already an array from our updated API
+      setDocuments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching pending documents:', error);
     } finally {

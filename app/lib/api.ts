@@ -86,15 +86,36 @@ export const api = {
     getStats: () => apiRequest('/admin/dashboard/stats', { method: 'GET' }),
     
     // Customers
-    getCustomers: () => apiRequest('/admin/customers', { method: 'GET' }),
+    getCustomers: async () => {
+      const response = await apiRequest('/admin/customers', { method: 'GET' });
+      // Handle paginated response
+      if (response && response.customers) {
+        return response.customers;
+      }
+      return Array.isArray(response) ? response : [];
+    },
     getCustomer: (id: string) => apiRequest(`/admin/customers/${id}`, { method: 'GET' }),
     
     // Pets
-    getPets: () => apiRequest('/admin/pets', { method: 'GET' }),
+    getPets: async () => {
+      const response = await apiRequest('/admin/pets', { method: 'GET' });
+      // Handle paginated response
+      if (response && response.pets) {
+        return response.pets;
+      }
+      return Array.isArray(response) ? response : [];
+    },
     getPet: (id: string) => apiRequest(`/admin/pets/${id}`, { method: 'GET' }),
     
     // Registrations
-    getRegistrations: () => apiRequest('/admin/registrations', { method: 'GET' }),
+    getRegistrations: async () => {
+      const response = await apiRequest('/admin/registrations', { method: 'GET' });
+      // Handle paginated response
+      if (response && response.registrations) {
+        return response.registrations;
+      }
+      return Array.isArray(response) ? response : [];
+    },
     getRegistration: (id: string) => apiRequest(`/admin/registrations/${id}`, { method: 'GET' }),
     
     // Registration Management
@@ -107,7 +128,10 @@ export const api = {
     getLicense: (petId: string) => apiRequest(`/admin/pets/${petId}/license`, { method: 'GET' }),
     
     // Documents
-    getPendingDocuments: () => apiRequest('/admin/documents/pending', { method: 'GET' }),
+    getPendingDocuments: async () => {
+      const response = await apiRequest('/admin/documents/pending', { method: 'GET' });
+      return Array.isArray(response) ? response : [];
+    },
     getRegistrationDocuments: (registrationId: string) =>
       apiRequest(`/admin/registrations/${registrationId}/documents`, { method: 'GET' }),
   },

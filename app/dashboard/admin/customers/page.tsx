@@ -32,7 +32,8 @@ export default function AdminCustomers() {
   const fetchCustomers = async () => {
     try {
       const data = await api.admin.getCustomers();
-      setCustomers(data);
+      // data is already an array from our updated API
+      setCustomers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {

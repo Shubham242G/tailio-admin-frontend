@@ -40,7 +40,8 @@ export default function AdminPets() {
   const fetchPets = async () => {
     try {
       const data = await api.admin.getPets();
-      setPets(data);
+      // data is already an array from our updated API
+      setPets(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching pets:', error);
     } finally {
