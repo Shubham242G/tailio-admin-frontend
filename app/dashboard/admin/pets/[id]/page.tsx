@@ -10,7 +10,7 @@ import {
   MapPin, CreditCard, Tag, FileCheck, Image as ImageIcon,
   File, X, ZoomIn, Phone, Mail, Home, Scissors,
   Package, Truck, Building2, Hash, Shield, Camera,
-  PenTool, BookOpen, FileSignature
+  PenTool, BookOpen, FileSignature, Upload, Plus
 } from 'lucide-react';
 import { api } from '../../../../lib/api';
 
@@ -230,6 +230,14 @@ function isPetDocumentField(value: any): value is PetDocumentField {
          value.fileData.length > 0;
 }
 
+// ✅ Get all optional document names for the city
+function getOptionalDocs(city: string): string[] {
+  if (['ghaziabad', 'noida'].includes(city)) {
+    return ['vaccinationCard']; // Optional for Ghaziabad/Noida
+  }
+  return [];
+}
+
 export default function AdminPetDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -240,12 +248,26 @@ export default function AdminPetDetailPage() {
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<DocumentType | null>(null);
   const [showDocModal, setShowDocModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [licenseData, setLicenseData] = useState({
     number: '',
     issueDate: new Date().toISOString().split('T')[0],
     expiryDate: '',
     file: null as File | null,
   });
+
+  // ✅ Upload document state
+  const [uploadForm, setUploadForm] = useState({
+    documentName: '',
+    file: null as File | null,
+    fileName: '',
+    fileSize: 0,
+    mimeType: '',
+  });
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     if (token && id) fetchPetDetail();
@@ -311,6 +333,105 @@ export default function AdminPetDetailPage() {
     }
   };
 
+  // ✅ Handle file selection for upload
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be under 10MB');
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Please upload a JPG, PNG, or PDF file');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadForm({
+      ...uploadForm,
+      file: file,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+    });
+  };
+
+  // ✅ Upload document to pet
+  const handleUploadDocument = async () => {
+  if (!uploadForm.file || !uploadForm.documentName) {
+    alert('Please select a document type and file');
+    return;
+  }
+
+  setUploadingDoc(true);
+  setUploadProgress(0);
+
+  try {
+    // Read file as base64
+    const fileData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          resolve(reader.result as string);
+        } else {
+          reject(new Error('Failed to read file'));
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(uploadForm.file as Blob);
+    });
+
+    setUploadProgress(50);
+
+    // ✅ Use the api.registration.uploadDocument method
+    const result = await api.registration.uploadDocument(
+      id as string,
+      uploadForm.documentName,
+      fileData,
+      uploadForm.fileName,
+      uploadForm.fileSize,
+      uploadForm.mimeType
+    );
+
+    console.log('✅ Upload successful:', result);
+
+    setUploadProgress(100);
+
+    // Refresh data
+    await fetchPetDetail();
+    
+    // Reset form
+    setUploadForm({
+      documentName: '',
+      file: null,
+      fileName: '',
+      fileSize: 0,
+      mimeType: '',
+    });
+    setShowUploadModal(false);
+    
+    // Reset file input
+    const fileInput = document.getElementById('admin-doc-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+
+    // Show success message
+    alert('Document uploaded successfully!');
+
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    alert(error.message || 'Failed to upload document. Please try again.');
+  } finally {
+    setUploadingDoc(false);
+    setUploadProgress(0);
+  }
+};
+
   // ✅ Get all documents from registration and pet
   const getAllDocuments = (): DocumentType[] => {
     const docs: DocumentType[] = [];
@@ -369,6 +490,12 @@ export default function AdminPetDetailPage() {
     return getCityRequiredDocs(data.pet.city, data.pet.isSterilizationRequired);
   };
 
+  // ✅ Get optional docs for the city
+  const getOptionalDocsForCity = (): string[] => {
+    if (!data?.pet) return [];
+    return getOptionalDocs(data.pet.city);
+  };
+
   // ✅ Check if all required documents are uploaded
   const hasAllRequiredDocs = (): boolean => {
     const docs = getAllDocuments();
@@ -388,8 +515,22 @@ export default function AdminPetDetailPage() {
 
   const allDocs = getAllDocuments();
   const requiredDocs = getRequiredDocs();
+  const optionalDocs = getOptionalDocsForCity();
   const docStatus = getDocumentStatus();
   const hasAllDocs = hasAllRequiredDocs();
+
+  // ✅ Get available document types for upload (missing required + optional)
+  const getAvailableDocsForUpload = (): { key: string; label: string; isRequired: boolean }[] => {
+    const uploaded = getAllDocuments().map(d => d.documentName);
+    const allPossibleDocs = [...requiredDocs, ...optionalDocs];
+    const available = allPossibleDocs.filter(doc => !uploaded.includes(doc));
+    
+    return available.map(doc => ({
+      key: doc,
+      label: DOC_LABELS[doc] || doc,
+      isRequired: requiredDocs.includes(doc),
+    }));
+  };
 
   const downloadDocument = (doc: DocumentType) => {
     if (doc.fileData) {
@@ -454,6 +595,7 @@ export default function AdminPetDetailPage() {
 
   // Get city display name
   const cityDisplay = CITY_LABELS[pet.city] || pet.city || 'N/A';
+  const availableDocs = getAvailableDocsForUpload();
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -604,10 +746,20 @@ export default function AdminPetDetailPage() {
             {/* Documents Card */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-orange-500" />
-                Documents ({docStatus.uploaded.length}/{requiredDocs.length} Required)
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-orange-500" />
+                  Documents ({docStatus.uploaded.length}/{requiredDocs.length} Required)
+                </h2>
+                {/* ✅ Upload Document Button */}
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Document
+                </button>
+              </div>
 
               {/* City info */}
               <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
@@ -888,6 +1040,125 @@ export default function AdminPetDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── UPLOAD DOCUMENT MODAL ─── */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Upload className="w-5 h-5 text-orange-500" />
+                Upload Document
+              </h2>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadForm({
+                    documentName: '',
+                    file: null,
+                    fileName: '',
+                    fileSize: 0,
+                    mimeType: '',
+                  });
+                  const fileInput = document.getElementById('admin-doc-upload') as HTMLInputElement;
+                  if (fileInput) fileInput.value = '';
+                }}
+                className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              Upload a document for <strong>{data?.pet.name}</strong> ({cityDisplay})
+            </p>
+
+            {uploadingDoc ? (
+              <div className="py-8 text-center">
+                <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">Uploading document...</p>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-3">
+                  <div className="bg-orange-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{uploadProgress}%</p>
+              </div>
+            ) : (
+              <form onSubmit={(e) => { e.preventDefault(); handleUploadDocument(); }} className="space-y-4">
+                {/* Document Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Document Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={uploadForm.documentName}
+                    onChange={(e) => setUploadForm({ ...uploadForm, documentName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                    required
+                  >
+                    <option value="">Select document type</option>
+                    {availableDocs.map(doc => (
+                      <option key={doc.key} value={doc.key}>
+                        {doc.label} {doc.isRequired ? '(Required)' : '(Optional)'}
+                      </option>
+                    ))}
+                  </select>
+                  {availableDocs.length === 0 && (
+                    <p className="text-xs text-green-600 mt-1">✅ All required and optional documents are already uploaded</p>
+                  )}
+                </div>
+
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Upload File <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="admin-doc-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileSelect}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                    required
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Accepted: PDF, JPG, PNG (Max 10MB)</p>
+                  {uploadForm.file && (
+                    <p className="text-xs text-green-600 mt-1">✅ {uploadForm.fileName} ({(uploadForm.fileSize / 1024).toFixed(1)} KB)</p>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setUploadForm({
+                        documentName: '',
+                        file: null,
+                        fileName: '',
+                        fileSize: 0,
+                        mimeType: '',
+                      });
+                      const fileInput = document.getElementById('admin-doc-upload') as HTMLInputElement;
+                      if (fileInput) fileInput.value = '';
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!uploadForm.documentName || !uploadForm.file || availableDocs.length === 0}
+                    className="flex-1 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload Document
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
