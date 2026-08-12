@@ -45,7 +45,6 @@ interface CustomerDetail {
     ageMonths: number;
     gender: string;
     color: string;
-    microchip: string;
     registrationStage: number;
     registrationStatus: string;
     profilePicture?: string;
@@ -474,10 +473,6 @@ export default function CustomerDetailPage() {
                     <div className="flex justify-between">
                       <span className="text-gray-500">Color:</span>
                       <span className="font-medium text-gray-900">{pet.color || 'Not specified'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Microchip:</span>
-                      <span className="font-medium text-gray-900">{pet.microchip || 'Not added'}</span>
                     </div>
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${stage.color}`}>

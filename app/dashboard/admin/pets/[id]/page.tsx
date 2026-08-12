@@ -43,7 +43,6 @@ interface PetDetail {
     ageMonths: number;
     gender: string;
     color: string;
-    microchip: string;
     city: string;
     registrationStage: number;
     registrationStatus: string;
@@ -635,7 +634,6 @@ export default function AdminPetDetailPage() {
                   ['Age', `${pet.ageYears}y ${pet.ageMonths}m`],
                   ['Gender', pet.gender || 'Unknown'],
                   ['Color', pet.color || 'N/A'],
-                  ['Microchip', pet.microchip || 'Not added'],
                   ['City', cityDisplay],
                   ['Registered', formatDate(pet.createdAt)],
                 ].map(([label, val]) => (
