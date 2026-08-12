@@ -100,7 +100,6 @@ interface PetDetail {
     proofOfAddress?: PetDocumentField;
     vaccinationRecord?: PetDocumentField;
     petPhotographs?: PetDocumentField;
-    microchipDetails?: PetDocumentField;
   };
   registration: {
     _id: string;
@@ -148,7 +147,6 @@ const DOC_LABELS: Record<string, string> = {
   proofOfAddress: 'Proof of Address',
   vaccinationRecord: 'Vaccination Record',
   petPhotographs: 'Pet Photographs',
-  microchipDetails: 'Microchip Details',
 };
 
 // ✅ Updated document icons
@@ -167,7 +165,6 @@ const DOC_ICONS: Record<string, any> = {
   proofOfAddress: Home,
   vaccinationRecord: BookOpen,
   petPhotographs: ImageIcon,
-  microchipDetails: Hash,
 };
 
 // ✅ Document descriptions for tooltips
@@ -186,7 +183,6 @@ const DOC_DESCRIPTIONS: Record<string, string> = {
   proofOfAddress: 'Proof of address (Utility bill, Rent agreement)',
   vaccinationRecord: 'Complete vaccination record',
   petPhotographs: 'Clear photos of the pet',
-  microchipDetails: 'Microchip number and registration',
 };
 
 // ✅ Document requirements by city
@@ -206,7 +202,7 @@ function getCityRequiredDocs(city: string, isSterilizationRequired: boolean = fa
   }
   
   if (city === 'faridabad') {
-    return ['proofOfIdentity', 'proofOfAddress', 'vaccinationRecord', 'petPhotographs', 'sterilizationCertificate', 'microchipDetails'];
+    return ['proofOfIdentity', 'proofOfAddress', 'vaccinationRecord', 'petPhotographs', 'sterilizationCertificate'];
   }
   
   return base;
@@ -460,7 +456,6 @@ export default function AdminPetDetailPage() {
         'proofOfAddress',
         'vaccinationRecord',
         'petPhotographs',
-        'microchipDetails',
       ];
 
       for (const field of docFields) {
