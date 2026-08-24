@@ -1,16 +1,20 @@
+// lib/api.ts
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 console.log('🔍 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
 console.log('🔍 API_BASE:', API_BASE);
 
-export async function apiRequest(endpoint: string, options: RequestInit = {}) {
-  // Remove any leading slash from endpoint to avoid double slashes
+export async function apiRequest<T = any>(
+  endpoint: string, 
+  options: RequestInit = {}
+): Promise<T> {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${API_BASE}${cleanEndpoint}`;
   
   console.log('🔍 Making request to:', url);
   
-  const token = localStorage.getItem('token');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   
   const config: RequestInit = {
     headers: {
@@ -36,8 +40,12 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
   }
 }
 
-// Generic apiFetch function for use in components
-export async function apiFetch(endpoint: string, method: string = 'GET', data?: any, token?: string | null) {
+export async function apiFetch<T = any>(
+  endpoint: string, 
+  method: string = 'GET', 
+  data?: any, 
+  token?: string | null
+): Promise<T> {
   const options: RequestInit = {
     method,
     headers: {
@@ -50,9 +58,56 @@ export async function apiFetch(endpoint: string, method: string = 'GET', data?: 
     options.body = JSON.stringify(data);
   }
 
-  return apiRequest(endpoint, options);
+  return apiRequest<T>(endpoint, options);
 }
 
+// FAQ API endpoints
+export const faqAPI = {
+  // Public endpoints
+  getByPage: (pageId: string, limit: number = 20) => 
+    apiRequest(`/faqs/page/${pageId}?limit=${limit}`),
+
+  getByCategory: (category: string, pageId?: string) => {
+    let url = `/faqs/category/${category}`;
+    if (pageId) url += `?pageId=${pageId}`;
+    return apiRequest(url);
+  },
+
+  getCategories: () => 
+    apiRequest('/faqs/categories'),
+
+  getPageOptions: () => 
+    apiRequest('/faqs/page-options'),
+
+  // Admin endpoints
+  getAll: (params?: Record<string, any>) => {
+    const queryString = params ? new URLSearchParams(params).toString() : '';
+    return apiRequest(`/faqs${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getStats: () => 
+    apiRequest('/faqs/stats'),
+
+  create: (data: any) => 
+    apiRequest('/faqs', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id: string, data: any) => 
+    apiRequest(`/faqs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) => 
+    apiRequest(`/faqs/${id}`, { method: 'DELETE' }),
+
+  bulkDelete: (ids: string[]) => 
+    apiRequest('/faqs/bulk-delete', { method: 'POST', body: JSON.stringify({ ids }) }),
+
+  toggleStatus: (id: string) => 
+    apiRequest(`/faqs/${id}/toggle`, { method: 'PATCH' }),
+
+  reorder: (pageId: string, orderedIds: string[]) => 
+    apiRequest('/faqs/reorder', { method: 'PUT', body: JSON.stringify({ pageId, orderedIds }) }),
+};
+
+// Export all APIs
 export const api = {
   auth: {
     login: (data: { email: string; password: string }) => 
@@ -82,52 +137,36 @@ export const api = {
       apiRequest(`/registration/${petId}/trigger-registration`, { method: 'POST' }),
   },
   admin: {
-    // Dashboard
     getStats: () => apiRequest('/admin/dashboard/stats', { method: 'GET' }),
-    
-    // Customers
     getCustomers: async () => {
       const response = await apiRequest('/admin/customers', { method: 'GET' });
-      // Handle paginated response
       if (response && response.customers) {
         return response.customers;
       }
       return Array.isArray(response) ? response : [];
     },
     getCustomer: (id: string) => apiRequest(`/admin/customers/${id}`, { method: 'GET' }),
-    
-    // Pets
     getPets: async () => {
       const response = await apiRequest('/admin/pets', { method: 'GET' });
-      // Handle paginated response
       if (response && response.pets) {
         return response.pets;
       }
       return Array.isArray(response) ? response : [];
     },
     getPet: (id: string) => apiRequest(`/admin/pets/${id}`, { method: 'GET' }),
-    
-    // Registrations
     getRegistrations: async () => {
       const response = await apiRequest('/admin/registrations', { method: 'GET' });
-      // Handle paginated response
       if (response && response.registrations) {
         return response.registrations;
       }
       return Array.isArray(response) ? response : [];
     },
     getRegistration: (id: string) => apiRequest(`/admin/registrations/${id}`, { method: 'GET' }),
-    
-    // Registration Management
     updateRegistrationStage: (petId: string, stage: number) =>
       apiRequest(`/admin/pets/${petId}/registration-stage`, { method: 'PUT', body: JSON.stringify({ stage }) }),
-    
-    // License Management
     issueLicense: (petId: string, licenseData: any) =>
       apiRequest(`/admin/pets/${petId}/license`, { method: 'POST', body: JSON.stringify(licenseData) }),
     getLicense: (petId: string) => apiRequest(`/admin/pets/${petId}/license`, { method: 'GET' }),
-    
-    // Documents
     getPendingDocuments: async () => {
       const response = await apiRequest('/admin/documents/pending', { method: 'GET' });
       return Array.isArray(response) ? response : [];
@@ -135,4 +174,5 @@ export const api = {
     getRegistrationDocuments: (registrationId: string) =>
       apiRequest(`/admin/registrations/${registrationId}/documents`, { method: 'GET' }),
   },
+  faqs: faqAPI,
 };
