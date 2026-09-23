@@ -145,6 +145,15 @@ export default function CustomerDetailPage() {
     return cities[city] || city;
   };
 
+  // Open WhatsApp chat with the customer
+  const openWhatsApp = (phone: string) => {
+    if (!phone) return;
+    let num = phone.replace(/\D/g, '');           // keep only digits
+    if (num.length === 10) num = '91' + num;      // add India code if missing
+    if (num.length === 11 && num.startsWith('0')) num = '91' + num.slice(1);
+    window.open(`https://api.whatsapp.com/send?phone=${num}`, '_blank');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -247,11 +256,11 @@ export default function CustomerDetailPage() {
               )}
               {(customer.mobile || customer.whatsappNumber) && (
                 <button
-                  onClick={() => window.location.href = `tel:${customer.mobile || customer.whatsappNumber}`}
+                  onClick={() => openWhatsApp(customer.whatsappNumber || customer.mobile)}
                   className="px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2"
                 >
-                  <Phone className="w-4 h-4" />
-                  Call
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp
                 </button>
               )}
             </div>
