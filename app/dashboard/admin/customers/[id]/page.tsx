@@ -41,6 +41,7 @@ interface CustomerDetail {
     _id: string;
     name: string;
     breed: string;
+    city: string;
     ageYears: number;
     ageMonths: number;
     gender: string;
@@ -134,16 +135,19 @@ export default function CustomerDetailPage() {
   };
 
   const getCityLabel = (city: string) => {
-    const cities: Record<string, string> = {
-      ghaziabad: 'Ghaziabad',
-      delhi: 'Delhi',
-      noida: 'Noida',
-      gurgaon: 'Gurgaon',
-      faridabad: 'Faridabad',
-      other: 'Other'
-    };
-    return cities[city] || city;
+  const cities: Record<string, string> = {
+    ghaziabad: 'Ghaziabad',
+    delhi: 'Delhi',
+    noida: 'Noida',
+    gurgaon: 'Gurgaon',
+    faridabad: 'Faridabad',
+    jaipur: 'Jaipur',
+    mumbai: 'Mumbai',
+    thane: 'Thane',
+    other: 'Other',
   };
+  return cities[city] || city || 'N/A';
+};
 
   // Open WhatsApp chat with the customer
   const openWhatsApp = (phone: string) => {
@@ -297,12 +301,17 @@ export default function CustomerDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
-              <MapPin className="w-5 h-5 text-orange-500" />
-              <div>
-                <p className="text-xs text-gray-400">City</p>
-                <p className="font-medium text-gray-900">{getCityLabel(customer.city)}</p>
-              </div>
-            </div>
+  <MapPin className="w-5 h-5 text-orange-500" />
+  <div>
+    <p className="text-xs text-gray-400">City</p>
+    <p className="font-medium text-gray-900">
+      {(() => {
+        const cities = [...new Set(pets.map(p => p.city).filter(Boolean))];
+        return cities.length ? cities.map(getCityLabel).join(', ') : getCityLabel(customer.city);
+      })()}
+    </p>
+  </div>
+</div>
             <div className="flex items-center gap-3 text-gray-600">
               <CreditCard className="w-5 h-5 text-orange-500" />
               <div>
